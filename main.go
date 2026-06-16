@@ -7,6 +7,7 @@ import (
 	"watchtower/mocks"
 	"watchtower/models"
 	"watchtower/storage"
+
 	"github.com/joho/godotenv"
 )
 
@@ -28,18 +29,15 @@ func main() {
 		log.Fatalf("Failed to connect to MinIO: %v", err)
 	}
 
-
 	DataPipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)
 	fmt.Println("[OK] Channel Successfully Created.")
 
-
 	go storage.ArchiveRawEvent(DataPipes, minioClient, cfg.Storage.Bucket)
 
-	go mocks.GenerateDynatrace(DataPipes)
-	go mocks.GenerateSplunk(DataPipes)
-	go mocks.GenerateRiverBed(DataPipes)
-	go mocks.GeneratePrometheus(DataPipes)
+	go mocks.GenerateDynatrace(DataPipes, cfg)
+	go mocks.GenerateSplunk(DataPipes, cfg)
+	go mocks.GenerateRiverBed(DataPipes, cfg)
+	go mocks.GeneratePrometheus(DataPipes, cfg)
 
-	
 	select {}
 }

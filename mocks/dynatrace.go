@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"time"
+	"watchtower/config"
 	"watchtower/models"
 )
 
-func GenerateDynatrace(dataPipe chan<- models.EventEnvelope) {
+func GenerateDynatrace(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig) {
 	fmt.Println("[Dynatrace] mock mulai beroperasi")
 	for iteration := 1; ; iteration++ {
 
@@ -25,14 +26,15 @@ func GenerateDynatrace(dataPipe chan<- models.EventEnvelope) {
 			Source:    "dynatrace",
 			Timestamp: currentTime,
 			Payload: map[string]interface{}{
-				"metric": cpuPercentage,
-				"value":  65.5,
-				"host":   "server-jkt-01",
+				"metric":     "cpu_usage_percent", // Tetap berupa teks statis
+				"value":      cpuPercentage,       // Diisi dengan variabel acak yang Anda buat
+				"host":       "server-jkt-01",
+				"slo_breach": iteration%5 == 0, // Bernilai true jika sedang anomali, false jika normal
 			},
 		}
 
 		dataPipe <- incomingData
 
-		time.Sleep(2 * time.Second)
+		time.Sleep(time.Duration(cfg.Mocks.EmitIntervalMs) * time.Millisecond)
 	}
 }

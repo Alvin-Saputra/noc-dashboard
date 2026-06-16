@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+	"watchtower/config"
 	"watchtower/models"
 )
 
-func GenerateRiverBed(dataPipe chan<- models.EventEnvelope) {
+func GenerateRiverBed(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig) {
 	fmt.Println("[Dynatrace] mock mulai beroperasi")
 	sitePairs := []string{"SG-HQ - ID-JKT", "SG-HQ - US-WEST"}
 
@@ -20,7 +21,7 @@ func GenerateRiverBed(dataPipe chan<- models.EventEnvelope) {
 		randomPacketLoss := rand.Float64() * 2.0
 		randomRtt := 10 + rand.Intn(140)
 
-		if rand.Float32() < 0.10 {
+		if rand.Float32() < float32(cfg.Mocks.AnomalyProbability) {
 			randomPacketLoss = 15.5
 			randomRtt = 450
 		}
@@ -42,6 +43,6 @@ func GenerateRiverBed(dataPipe chan<- models.EventEnvelope) {
 
 		currentIndex = (currentIndex + 1) % len(sitePairs)
 
-		time.Sleep(4 * time.Second)
+		time.Sleep(time.Duration(cfg.Mocks.EmitIntervalMs) * time.Millisecond)
 	}
 }

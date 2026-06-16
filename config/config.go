@@ -11,6 +11,10 @@ type AppConfig struct {
 		ChannelBufferSize int `json:"channel_buffer_size"`
 		DropLogIntervalMs int `json:"drop_log_interval_ms"`
 	} `json:"ingestion"`
+	Mocks struct {
+		EmitIntervalMs     int     `json:"emit_interval_ms"`
+		AnomalyProbability float64 `json:"anomaly_probability"`
+	} `json:"mocks"`
 	Screening struct {
 		WorkerCount        int `json:"worker_count"`
 		DedupTTLSeconds    int `json:"dedup_ttl_seconds"`

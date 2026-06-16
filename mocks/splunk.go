@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+	"watchtower/config"
 	"watchtower/models"
 )
 
-func GenerateSplunk(dataPipe chan<- models.EventEnvelope) {
+func GenerateSplunk(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig) {
 	fmt.Println("[Dynatrace] mock mulai beroperasi")
 
 	severity := []string{
@@ -61,6 +62,6 @@ func GenerateSplunk(dataPipe chan<- models.EventEnvelope) {
 
 		dataPipe <- incomingData
 
-		time.Sleep(3 * time.Second)
+		time.Sleep(time.Duration(cfg.Mocks.EmitIntervalMs) * time.Millisecond)
 	}
 }

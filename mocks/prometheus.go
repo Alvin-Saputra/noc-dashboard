@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"time"
+	"watchtower/config"
 	"watchtower/models"
 )
 
-func GeneratePrometheus(dataPipe chan<- models.EventEnvelope) {
+func GeneratePrometheus(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig) {
 	fmt.Println("[Prometheus] Pabrik mulai beroperasi...")
 
 	metricFamilies := []string{"http_request_rate", "http_error_rate", "system_saturation"}
@@ -37,7 +38,7 @@ func GeneratePrometheus(dataPipe chan<- models.EventEnvelope) {
 			labels["method"] = "POST"
 			labels["endpoint"] = "/api/checkout"
 
-			if rand.Float32() < 0.05 {
+			if rand.Float32() < float32(cfg.Mocks.AnomalyProbability) {
 				value = 50.0 + rand.Float64()*50.0
 			}
 
@@ -46,7 +47,7 @@ func GeneratePrometheus(dataPipe chan<- models.EventEnvelope) {
 			value = 0.30 + rand.Float64()*0.40
 			labels["resource"] = "database_connection_pool"
 
-			if rand.Float32() < 0.05 {
+			if rand.Float32() < float32(cfg.Mocks.AnomalyProbability) {
 				value = 0.95 + rand.Float64()*0.05
 			}
 		}
@@ -67,6 +68,6 @@ func GeneratePrometheus(dataPipe chan<- models.EventEnvelope) {
 
 		currentIndex = (currentIndex + 1) % len(metricFamilies)
 
-		time.Sleep(1 * time.Second)
+		time.Sleep(time.Duration(cfg.Mocks.EmitIntervalMs) * time.Millisecond)
 	}
 }
