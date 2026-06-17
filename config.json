@@ -4,5 +4,5 @@
   "screening":  { "worker_count": 4, "dedup_ttl_seconds": 60, "noise_window_seconds": 30 },
   "ml":         { "anomaly_sigma_threshold": 2.5, "ema_alpha": 0.15, "forecast_horizon_minutes": 5, "regression_window_size": 100 },
   "storage":    { "endpoint": "localhost:9000", "bucket": "watchtower", "region": "ap-southeast-1" },
-  "server":     { "port": 8080, "shutdown_timeout_seconds": 5 }
+  "server":     { "port": 8081, "shutdown_timeout_seconds": 5 }
 }

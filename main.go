@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"watchtower/api"
 	"watchtower/config"
 	"watchtower/mocks"
 	"watchtower/models"
@@ -59,7 +61,21 @@ func main() {
 
 	screening.StartScreeningPipeline(ScreeningPipes, ScreenedArchivePipes, cfg.Screening.WorkerCount, dedupCache, noiseFilter, policyManager)
 
+	apiServer := &api.APIServer{
+		PolicyManager: policyManager,
+		MinioClient:   minioClient,
+		BucketName:    cfg.Storage.Bucket,
+	}
+
 	go func() {
+		err := apiServer.Start(cfg.Server.Port)
+		if err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server failed to start: %v", err)
+		}
+	}()
+
+	go func() {
+
 		for data := range DataPipes {
 			RawArchivePipes <- data
 
@@ -79,6 +95,7 @@ func main() {
 
 			ScreeningPipes <- dataScreening
 		}
+
 	}()
 
 	go mocks.GenerateDynatrace(DataPipes, cfg)
