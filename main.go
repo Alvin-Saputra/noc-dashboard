@@ -3,16 +3,20 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"watchtower/config"
 	"watchtower/mocks"
 	"watchtower/models"
+	"watchtower/screening"
 	"watchtower/storage"
 
 	"github.com/joho/godotenv"
 )
 
 func main() {
-
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("Info: File .env not found")
@@ -30,14 +34,66 @@ func main() {
 	}
 
 	DataPipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)
-	fmt.Println("[OK] Channel Successfully Created.")
+	RawArchivePipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)
+	ScreeningPipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)
+	ScreenedArchivePipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)
 
-	go storage.ArchiveRawEvent(DataPipes, minioClient, cfg.Storage.Bucket)
+	fmt.Println("[OK] Channels Successfully Created.")
+
+	go storage.ArchiveRawEvent(RawArchivePipes, minioClient, cfg.Storage.Bucket)
+	go storage.ArchiveScreenedEvent(ScreenedArchivePipes, minioClient, cfg.Storage.Bucket)
+
+	dedupCache := screening.NewDedupCache(cfg.Screening.DedupTTLSeconds)
+	dedupCache.LoadSnapshot(minioClient, cfg.Storage.Bucket)
+	noiseFilter := screening.NewNoiseFilter(cfg.Screening.NoiseWindowSeconds)
+
+	defaultPolicy := screening.Policy{
+		DefaultPriority: "P4",
+		Rules: []screening.Rule{
+			{Source: "splunktrace", Key: "severity", Value: "CRITICAL", Priority: "P1"},
+		},
+	}
+	policyManager := screening.NewPolicyManager(defaultPolicy)
+
+	go policyManager.WatchPolicy(minioClient, cfg.Storage.Bucket)
+
+	screening.StartScreeningPipeline(ScreeningPipes, ScreenedArchivePipes, cfg.Screening.WorkerCount, dedupCache, noiseFilter, policyManager)
+
+	go func() {
+		for data := range DataPipes {
+			RawArchivePipes <- data
+
+			payloadCopy := make(map[string]interface{})
+
+			for key, value := range data.Payload {
+				payloadCopy[key] = value
+			}
+
+			dataScreening := models.EventEnvelope{
+				Version:   data.Version,
+				ID:        data.ID,
+				Source:    data.Source,
+				Timestamp: data.Timestamp,
+				Payload:   payloadCopy,
+			}
+
+			ScreeningPipes <- dataScreening
+		}
+	}()
 
 	go mocks.GenerateDynatrace(DataPipes, cfg)
 	go mocks.GenerateSplunk(DataPipes, cfg)
 	go mocks.GenerateRiverBed(DataPipes, cfg)
 	go mocks.GeneratePrometheus(DataPipes, cfg)
 
-	select {}
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	<-sigChan
+
+	fmt.Println("\n\n[System] Stop signal received! Shutting down the application gracefully...")
+
+	dedupCache.SaveSnapshot(minioClient, cfg.Storage.Bucket)
+
+	fmt.Println("[System] Application Shutdown Successfully")
 }

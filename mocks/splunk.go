@@ -21,15 +21,17 @@ func GenerateSplunk(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig)
 
 		randomizer := rand.Intn(3)
 
-		if iteration%50 == 0 {
-			for iteration := 1; iteration <= 20; iteration++ {
-				currentTime := time.Now().Unix()
+		if iteration%10 == 0 {
 
+			burstTime := time.Now().Unix()
+			burstID := fmt.Sprintf("splunk-%d", burstTime)
+
+			for i := 1; i <= 20; i++ {
 				incomingData := models.EventEnvelope{
 					Version:   "1.0",
-					ID:        fmt.Sprintf("splunk-%d", currentTime),
+					ID:        burstID, // Gunakan burstID yang sama untuk ke-20 data
 					Source:    "splunktrace",
-					Timestamp: currentTime,
+					Timestamp: burstTime,
 					Payload: map[string]interface{}{
 						"severity":  "CRITICAL",
 						"source_ip": "192.168.1.55",
@@ -40,8 +42,6 @@ func GenerateSplunk(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig)
 
 				dataPipe <- incomingData
 
-				time.Sleep(3 * time.Second)
-				continue
 			}
 		}
 

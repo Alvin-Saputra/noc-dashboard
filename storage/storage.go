@@ -75,7 +75,42 @@ func ArchiveRawEvent(dataPipe <-chan models.EventEnvelope, client *minio.Client,
 		if err != nil {
 			log.Printf("Error saving to MinIO: %v", err)
 		} else {
-			fmt.Printf("[Storage] Successfully Archiving Documents: %s\n", objectName)
+			fmt.Printf("[Storage] Successfully Archiving Raw Documents: %s\n", objectName)
+		}
+	}
+}
+
+func ArchiveScreenedEvent(dataPipe <-chan models.EventEnvelope, client *minio.Client, bucketName string) {
+	ctx := context.Background()
+
+	for data := range dataPipe {
+
+		JSONTextResult, err := json.Marshal(data)
+		if err != nil {
+			log.Printf("Failed Parse to JSON: %v", err)
+			continue
+		}
+
+		eventTime := time.Unix(data.Timestamp, 0).UTC()
+		objectName := fmt.Sprintf("events/screened/%04d/%02d/%02d/%02d/%s.json",
+			eventTime.Year(),
+			eventTime.Month(),
+			eventTime.Day(),
+			eventTime.Hour(),
+			data.ID,
+		)
+
+		reader := bytes.NewReader(JSONTextResult)
+		fileSize := int64(len(JSONTextResult))
+
+		_, err = client.PutObject(ctx, bucketName, objectName, reader, fileSize, minio.PutObjectOptions{
+			ContentType: "application/json",
+		})
+
+		if err != nil {
+			log.Printf("Error saving to MinIO: %v", err)
+		} else {
+			fmt.Printf("[Storage] Successfully Archiving Screened Documents: %s\n", objectName)
 		}
 	}
 }
