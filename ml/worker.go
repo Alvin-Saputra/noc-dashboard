@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"time"
+	"watchtower/config"
 	"watchtower/models"
 
 	"github.com/minio/minio-go/v7"
@@ -16,6 +17,7 @@ func StartMLWorker(
 	mlPipe <-chan models.EventEnvelope,
 	minioClient *minio.Client,
 	bucketName string,
+	cfg *config.AppConfig,
 ) {
 
 	detectors := make(map[string]*ZScoreDetector)
@@ -32,7 +34,7 @@ func StartMLWorker(
 			value, isNumerical = getFloat(data.Payload["value"])
 
 		case "dynatrace":
-			metricName = fmt.Sprintf("%v", data.Payload["metric"]) 
+			metricName = fmt.Sprintf("%v", data.Payload["metric"])
 			value, isNumerical = getFloat(data.Payload["value"])
 
 		case "riverbedtrace":
@@ -51,7 +53,7 @@ func StartMLWorker(
 		key := fmt.Sprintf("%s-%s", data.Source, metricName)
 
 		if _, exists := detectors[key]; !exists {
-			detectors[key] = NewZScoreDetector(10) 
+			detectors[key] = NewZScoreDetector(cfg.ML.AnomalySigmaThreshold, cfg.ML.RegressionWindowSize)
 		}
 
 		detector := detectors[key]
@@ -73,11 +75,11 @@ func StartMLWorker(
 		}
 
 		if _, exists := predictors[key]; !exists {
-			predictors[key] = NewTrendPredictor(100)
+			predictors[key] = NewTrendPredictor(cfg.ML.RegressionWindowSize)
 		}
 		predictor := predictors[key]
 
-		horizonSeconds := int64(300)
+		horizonSeconds := int64(cfg.ML.ForecastHorizonMinutes * 60)
 		predVal, confLow, confUp := predictor.UpdateAndPredict(value, data.Timestamp, horizonSeconds)
 
 		if len(predictor.historyX)%50 == 0 {
