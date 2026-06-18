@@ -9,6 +9,7 @@ import (
 func StartScreeningPipeline(
 	inputPipe <-chan models.EventEnvelope,
 	outputPipe chan<- models.EventEnvelope,
+	quarantinePipe chan<- models.EventEnvelope,
 	workerCount int,
 	dedupCache *DedupCache,
 	NoiseFilter *NoiseFilter,
@@ -24,6 +25,18 @@ func StartScreeningPipeline(
 			fmt.Printf("[Screening] Worker %d Ready!\n", workerID)
 
 			for data := range inputPipe {
+
+				isValid, reason := ValidateEvent(&data)
+				if !isValid {
+					// Selipkan alasan error ke dalam payload
+					data.Payload["quarantine_reason"] = reason
+
+					// Lempar data ke pipa karantina
+					quarantinePipe <- data
+
+					// Hentikan proses, jangan lanjut ke Deduplikasi
+					continue
+				}
 
 				if dedupCache.IsDuplicate(data.ID) {
 					continue

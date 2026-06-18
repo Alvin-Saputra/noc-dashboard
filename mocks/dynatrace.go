@@ -10,6 +10,7 @@ import (
 
 func GenerateDynatrace(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig) {
 	fmt.Println("[Dynatrace] mock mulai beroperasi")
+	var droppedCounter int64
 	for iteration := 1; ; iteration++ {
 
 		cpuPercentage := 40 + rand.Float64()*40
@@ -33,8 +34,13 @@ func GenerateDynatrace(dataPipe chan<- models.EventEnvelope, cfg *config.AppConf
 			},
 		}
 
-		dataPipe <- incomingData
+		select {
+		case dataPipe <- incomingData:
 
+		default:
+			droppedCounter++
+			fmt.Printf("[Backpressure] Pipa penuh! %s terpaksa dibuang. (Total Dibuang: %d)\n", incomingData.ID, droppedCounter)
+		}
 		time.Sleep(time.Duration(cfg.Mocks.EmitIntervalMs) * time.Millisecond)
 	}
 }

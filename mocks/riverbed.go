@@ -12,6 +12,8 @@ func GenerateRiverBed(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfi
 	fmt.Println("[Dynatrace] mock mulai beroperasi")
 	sitePairs := []string{"SG-HQ - ID-JKT", "SG-HQ - US-WEST"}
 
+	var droppedCounter int64
+
 	currentIndex := 0
 	for {
 		currentTime := time.Now().Unix()
@@ -39,7 +41,13 @@ func GenerateRiverBed(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfi
 			},
 		}
 
-		dataPipe <- incomingData
+		select {
+		case dataPipe <- incomingData:
+
+		default:
+			droppedCounter++
+			fmt.Printf("[Backpressure] Pipa penuh! %s terpaksa dibuang. (Total Dibuang: %d)\n", incomingData.ID, droppedCounter)
+		}
 
 		currentIndex = (currentIndex + 1) % len(sitePairs)
 
