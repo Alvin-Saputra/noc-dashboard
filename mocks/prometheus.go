@@ -13,6 +13,7 @@ func GeneratePrometheus(dataPipe chan<- models.EventEnvelope, cfg *config.AppCon
 
 	metricFamilies := []string{"http_request_rate", "http_error_rate", "system_saturation"}
 	currentIndex := 0
+	var droppedCounter int64
 
 	for {
 		currentTime := time.Now().Unix()
@@ -64,7 +65,13 @@ func GeneratePrometheus(dataPipe chan<- models.EventEnvelope, cfg *config.AppCon
 			},
 		}
 
-		dataPipe <- incomingData
+		select {
+		case dataPipe <- incomingData:
+
+		default:
+			droppedCounter++
+			fmt.Printf("[Backpressure] Pipa penuh! %s terpaksa dibuang. (Total Dibuang: %d)\n", incomingData.ID, droppedCounter)
+		}
 
 		currentIndex = (currentIndex + 1) % len(metricFamilies)
 

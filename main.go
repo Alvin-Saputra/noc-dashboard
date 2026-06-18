@@ -37,11 +37,13 @@ func main() {
 	RawArchivePipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)
 	ScreeningPipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)
 	ScreenedArchivePipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)
+	QuarantinePipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)
 
 	fmt.Println("[OK] Channels Successfully Created.")
 
 	go storage.ArchiveRawEvent(RawArchivePipes, minioClient, cfg.Storage.Bucket)
 	go storage.ArchiveScreenedEvent(ScreenedArchivePipes, minioClient, cfg.Storage.Bucket)
+	go storage.ArchiveQuarantineEvent(QuarantinePipes, minioClient, cfg.Storage.Bucket) // <--- KURIR BARU
 
 	dedupCache := screening.NewDedupCache(cfg.Screening.DedupTTLSeconds)
 	dedupCache.LoadSnapshot(minioClient, cfg.Storage.Bucket)
@@ -57,7 +59,7 @@ func main() {
 
 	go policyManager.WatchPolicy(minioClient, cfg.Storage.Bucket)
 
-	screening.StartScreeningPipeline(ScreeningPipes, ScreenedArchivePipes, cfg.Screening.WorkerCount, dedupCache, noiseFilter, policyManager)
+	screening.StartScreeningPipeline(ScreeningPipes, ScreenedArchivePipes, QuarantinePipes, cfg.Screening.WorkerCount, dedupCache, noiseFilter, policyManager)
 
 	go func() {
 		for data := range DataPipes {

@@ -114,3 +114,44 @@ func ArchiveScreenedEvent(dataPipe <-chan models.EventEnvelope, client *minio.Cl
 		}
 	}
 }
+
+
+// ArchiveQuarantineEvent adalah kurir khusus untuk membuang data cacat ke ruang karantina
+func ArchiveQuarantineEvent(dataPipe <-chan models.EventEnvelope, client *minio.Client, bucketName string) {
+	ctx := context.Background()
+
+	for data := range dataPipe {
+		JSONTextResult, err := json.Marshal(data)
+		if err != nil {
+			continue
+		}
+
+		// Ambil alasan karantina yang diselipkan pekerja, gunakan "unknown" jika kosong
+		alasan := "unknown"
+		if val, ada := data.Payload["quarantine_reason"]; ada {
+			alasan = fmt.Sprintf("%v", val)
+		}
+
+		// Karena datanya cacat, kita gunakan waktu saat ini (sekarang) untuk pembuatan folder
+		// agar tidak nyasar ke folder tahun 1970
+		waktuSekarang := time.Now().UTC()
+		
+		objectName := fmt.Sprintf("events/quarantine/%04d/%02d/%02d/%02d/%s_%s.json",
+			waktuSekarang.Year(),
+			waktuSekarang.Month(),
+			waktuSekarang.Day(),
+			waktuSekarang.Hour(),
+			alasan, // Nama file akan berawalan missing_id_, stale_timestamp_, dll
+			data.ID,
+		)
+
+		reader := bytes.NewReader(JSONTextResult)
+		_, err = client.PutObject(ctx, bucketName, objectName, reader, int64(len(JSONTextResult)), minio.PutObjectOptions{
+			ContentType: "application/json",
+		})
+
+		if err == nil {
+			fmt.Printf("[Quarantine] 🚨 Mengarsipkan data cacat ke: %s\n", objectName)
+		}
+	}
+}

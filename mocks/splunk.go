@@ -17,6 +17,8 @@ func GenerateSplunk(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig)
 		"ERROR",
 		"CRITICAL"}
 
+	var droppedCounter int64
+
 	for iteration := 1; ; iteration++ {
 
 		randomizer := rand.Intn(3)
@@ -29,7 +31,7 @@ func GenerateSplunk(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig)
 			for i := 1; i <= 20; i++ {
 				incomingData := models.EventEnvelope{
 					Version:   "1.0",
-					ID:        burstID, // Gunakan burstID yang sama untuk ke-20 data
+					ID:        burstID,
 					Source:    "splunktrace",
 					Timestamp: burstTime,
 					Payload: map[string]interface{}{
@@ -60,7 +62,13 @@ func GenerateSplunk(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig)
 			},
 		}
 
-		dataPipe <- incomingData
+		select {
+		case dataPipe <- incomingData:
+
+		default:
+			droppedCounter++
+			fmt.Printf("[Backpressure] Pipa penuh! %s terpaksa dibuang. (Total Dibuang: %d)\n", incomingData.ID, droppedCounter)
+		}
 
 		time.Sleep(time.Duration(cfg.Mocks.EmitIntervalMs) * time.Millisecond)
 	}

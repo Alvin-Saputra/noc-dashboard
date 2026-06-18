@@ -9,6 +9,7 @@ import (
 func StartScreeningPipeline(
 	inputPipe <-chan models.EventEnvelope,
 	outputPipe chan<- models.EventEnvelope,
+	quarantinePipe chan<- models.EventEnvelope,
 	workerCount int,
 	dedupCache *DedupCache,
 	NoiseFilter *NoiseFilter,
@@ -21,21 +22,33 @@ func StartScreeningPipeline(
 
 		go func(workerID int) {
 			defer wg.Done()
-			fmt.Printf("[Screening] Worker Ready!\n", workerID)
+			fmt.Printf("[Dedup] Pekerja membuang data: %d\n", workerID)
 
 			for data := range inputPipe {
 
-				if dedupCache.IsDuplicate(data.ID) {
+				isValid, reason := ValidateEvent(&data)
+				if !isValid {
+					// Selipkan alasan error ke dalam payload
+					data.Payload["quarantine_reason"] = reason
+					
+					// Lempar data ke pipa karantina
+					quarantinePipe <- data 
+					
+					// Hentikan proses, jangan lanjut ke Deduplikasi
 					continue 
+				}
+
+				if dedupCache.IsDuplicate(data.ID) {
+					continue
 				}
 
 				Classify(&data, &policyManager.policy)
 
 				if NoiseFilter.IsNoise(&data) {
-					continue 
+					continue
 				}
 
-				outputPipe <- data 
+				outputPipe <- data
 				prioritas := data.Payload["priority"]
 				fmt.Printf("[Lolos Pos 2] Worker %d - ID: %s | Priority: %v\n", workerID, data.ID, prioritas)
 			}
