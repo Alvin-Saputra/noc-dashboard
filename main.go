@@ -42,8 +42,8 @@ func main() {
 	ScreeningPipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)
 	ScreenedArchivePipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)
 	QuarantinePipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)
-	CleanDataPipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize) 
-	MLPipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)        
+	CleanDataPipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)
+	MLPipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)
 
 	fmt.Println("[OK] Channels Successfully Created.")
 
@@ -65,16 +65,15 @@ func main() {
 
 	go policyManager.WatchPolicy(minioClient, cfg.Storage.Bucket)
 
-	
 	screening.StartScreeningPipeline(ScreeningPipes, CleanDataPipes, QuarantinePipes, cfg.Screening.WorkerCount, dedupCache, noiseFilter, policyManager)
 
-	sseBroker := api.NewBroker() 
+	sseBroker := api.NewBroker()
 
 	apiServer := &api.APIServer{
 		PolicyManager: policyManager,
 		MinioClient:   minioClient,
 		BucketName:    cfg.Storage.Bucket,
-		SSEBroker:     sseBroker, 
+		SSEBroker:     sseBroker,
 	}
 
 	go func() {
@@ -105,11 +104,11 @@ func main() {
 		}
 	}()
 
-	go ml.StartMLWorker(MLPipes, minioClient, cfg.Storage.Bucket)
+	go ml.StartMLWorker(MLPipes, minioClient, cfg.Storage.Bucket, cfg)
 
 	go func() {
 		for cleanData := range CleanDataPipes {
-		
+
 			ScreenedArchivePipes <- cleanData
 
 			payloadCopy := make(map[string]interface{})
