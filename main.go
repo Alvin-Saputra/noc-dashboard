@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -40,8 +41,8 @@ func main() {
 	RawArchivePipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)
 	ScreeningPipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)
 	ScreenedArchivePipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)
-	CleanDataPipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize) // Pipa penampung sementara
-	MLPipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)        // Pipa untuk otak ML
+	CleanDataPipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize) 
+	MLPipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)        
 
 	fmt.Println("[OK] Channels Successfully Created.")
 
@@ -62,13 +63,16 @@ func main() {
 
 	go policyManager.WatchPolicy(minioClient, cfg.Storage.Bucket)
 
-	// screening.StartScreeningPipeline(ScreeningPipes, ScreenedArchivePipes, cfg.Screening.WorkerCount, dedupCache, noiseFilter, policyManager)
+	
 	screening.StartScreeningPipeline(ScreeningPipes, CleanDataPipes, cfg.Screening.WorkerCount, dedupCache, noiseFilter, policyManager)
+
+	sseBroker := api.NewBroker() 
 
 	apiServer := &api.APIServer{
 		PolicyManager: policyManager,
 		MinioClient:   minioClient,
 		BucketName:    cfg.Storage.Bucket,
+		SSEBroker:     sseBroker, 
 	}
 
 	go func() {
@@ -103,10 +107,9 @@ func main() {
 
 	go func() {
 		for cleanData := range CleanDataPipes {
-			// 1. Kirim ke rak gudang /events/screened/
+		
 			ScreenedArchivePipes <- cleanData
 
-			// 2. Fotokopi untuk mesin ML (agar memorinya tidak tabrakan)
 			payloadCopy := make(map[string]interface{})
 			for k, v := range cleanData.Payload {
 				payloadCopy[k] = v
@@ -120,8 +123,12 @@ func main() {
 				Payload:   payloadCopy,
 			}
 
-			// 3. Kirim ke meja pekerja ML
 			MLPipes <- mlData
+
+			jsonData, err := json.Marshal(cleanData)
+			if err == nil {
+				sseBroker.Notifier <- jsonData
+			}
 		}
 	}()
 

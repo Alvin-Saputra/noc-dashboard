@@ -21,23 +21,27 @@ func StartScreeningPipeline(
 
 		go func(workerID int) {
 			defer wg.Done()
-			fmt.Printf("[Screening] Worker Ready!\n", workerID)
+			fmt.Printf("[Screening] Worker %d Ready!\n", workerID)
 
 			for data := range inputPipe {
 
 				if dedupCache.IsDuplicate(data.ID) {
-					continue 
+					continue
 				}
 
-				Classify(&data, &policyManager.policy)
+				Classify(&data, policyManager)
 
 				if NoiseFilter.IsNoise(&data) {
-					continue 
+					continue
 				}
 
-				outputPipe <- data 
+				outputPipe <- data
 				prioritas := data.Payload["priority"]
-				fmt.Printf("[Lolos Pos 2] Worker %d - ID: %s | Priority: %v\n", workerID, data.ID, prioritas)
+				if prioritas == "P1" || prioritas == "P2" || prioritas == "P3" {
+					fmt.Printf("\n🔥 [ALARM POS 2] Worker %d - %s | Priority: %v 🔥\n\n", workerID, data.Source, prioritas)
+				} else {
+					fmt.Printf("[Pass Post 2] Worker %d - ID: %s | Priority: %v\n", workerID, data.ID, prioritas)
+				}
 			}
 		}(i)
 	}

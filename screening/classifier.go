@@ -88,14 +88,16 @@ func (pm *PolicyManager) GetPolicy() Policy {
 func (pm *PolicyManager) RLock()   { pm.mu.RLock() }
 func (pm *PolicyManager) RUnlock() { pm.mu.RUnlock() }
 
-func Classify(data *models.EventEnvelope, policy *Policy) {
-	stamp := policy.DefaultPriority
+func Classify(data *models.EventEnvelope, pm *PolicyManager) {
+	pm.mu.RLock()
+	currentPolicy := pm.policy
+	pm.mu.RUnlock()
 
-	for _, rule := range policy.Rules {
+	stamp := currentPolicy.DefaultPriority
+
+	for _, rule := range currentPolicy.Rules {
 		if data.Source == rule.Source {
-
 			if isiPayload, exist := data.Payload[rule.Key]; exist {
-
 				if fmt.Sprintf("%v", isiPayload) == fmt.Sprintf("%v", rule.Value) {
 					stamp = rule.Priority
 					break

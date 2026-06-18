@@ -26,10 +26,10 @@ func GenerateDynatrace(dataPipe chan<- models.EventEnvelope, cfg *config.AppConf
 			Source:    "dynatrace",
 			Timestamp: currentTime,
 			Payload: map[string]interface{}{
-				"metric":     "cpu_usage_percent", // Tetap berupa teks statis
-				"value":      cpuPercentage,       // Diisi dengan variabel acak yang Anda buat
+				"metric":     "cpu_usage_percent", 
+				"value":      cpuPercentage,      
 				"host":       "server-jkt-01",
-				"slo_breach": iteration%5 == 0, // Bernilai true jika sedang anomali, false jika normal
+				"slo_breach": iteration%5 == 0, 
 			},
 		}
 
