@@ -10,6 +10,7 @@ import (
 
 	"watchtower/api"
 	"watchtower/config"
+	"watchtower/ml"
 	"watchtower/mocks"
 	"watchtower/models"
 	"watchtower/screening"
@@ -39,6 +40,8 @@ func main() {
 	RawArchivePipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)
 	ScreeningPipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)
 	ScreenedArchivePipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)
+	CleanDataPipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize) // Pipa penampung sementara
+	MLPipes := make(chan models.EventEnvelope, cfg.Ingestion.ChannelBufferSize)        // Pipa untuk otak ML
 
 	fmt.Println("[OK] Channels Successfully Created.")
 
@@ -59,7 +62,8 @@ func main() {
 
 	go policyManager.WatchPolicy(minioClient, cfg.Storage.Bucket)
 
-	screening.StartScreeningPipeline(ScreeningPipes, ScreenedArchivePipes, cfg.Screening.WorkerCount, dedupCache, noiseFilter, policyManager)
+	// screening.StartScreeningPipeline(ScreeningPipes, ScreenedArchivePipes, cfg.Screening.WorkerCount, dedupCache, noiseFilter, policyManager)
+	screening.StartScreeningPipeline(ScreeningPipes, CleanDataPipes, cfg.Screening.WorkerCount, dedupCache, noiseFilter, policyManager)
 
 	apiServer := &api.APIServer{
 		PolicyManager: policyManager,
@@ -75,12 +79,10 @@ func main() {
 	}()
 
 	go func() {
-
 		for data := range DataPipes {
 			RawArchivePipes <- data
 
 			payloadCopy := make(map[string]interface{})
-
 			for key, value := range data.Payload {
 				payloadCopy[key] = value
 			}
@@ -95,7 +97,32 @@ func main() {
 
 			ScreeningPipes <- dataScreening
 		}
+	}()
 
+	go ml.StartMLWorker(MLPipes, minioClient, cfg.Storage.Bucket)
+
+	go func() {
+		for cleanData := range CleanDataPipes {
+			// 1. Kirim ke rak gudang /events/screened/
+			ScreenedArchivePipes <- cleanData
+
+			// 2. Fotokopi untuk mesin ML (agar memorinya tidak tabrakan)
+			payloadCopy := make(map[string]interface{})
+			for k, v := range cleanData.Payload {
+				payloadCopy[k] = v
+			}
+
+			mlData := models.EventEnvelope{
+				Version:   cleanData.Version,
+				ID:        cleanData.ID,
+				Source:    cleanData.Source,
+				Timestamp: cleanData.Timestamp,
+				Payload:   payloadCopy,
+			}
+
+			// 3. Kirim ke meja pekerja ML
+			MLPipes <- mlData
+		}
 	}()
 
 	go mocks.GenerateDynatrace(DataPipes, cfg)
