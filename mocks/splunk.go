@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+	"sync/atomic"
 	"watchtower/config"
 	"watchtower/models"
 )
 
-func GenerateSplunk(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig) {
+func GenerateSplunk(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig, dropCounter *atomic.Uint64) {
 	fmt.Println("[Dynatrace] mock mulai beroperasi")
 
 	severity := []string{
@@ -66,7 +67,7 @@ func GenerateSplunk(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig)
 		case dataPipe <- incomingData:
 
 		default:
-			droppedCounter++
+			dropCounter.Add(1)
 			fmt.Printf("[Backpressure] Pipa penuh! %s terpaksa dibuang. (Total Dibuang: %d)\n", incomingData.ID, droppedCounter)
 		}
 

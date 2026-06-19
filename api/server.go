@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
+	"sync/atomic"
 	"watchtower/screening"
 
 	"github.com/minio/minio-go/v7"
@@ -16,6 +17,8 @@ type APIServer struct {
 	MinioClient   *minio.Client
 	BucketName    string
 	SSEBroker     *Broker
+	DropCounter   *atomic.Uint64 // <--- TAMBAHKAN PROPERTI INI
+	WorkerCount   int
 }
 
 func (s *APIServer) Start(port int) error {
@@ -41,13 +44,14 @@ func (s *APIServer) handleState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dummyState := map[string]interface{}{
-		"status":         "Application is running smoothly!",
-		"active_workers": 4,
+	actualState := map[string]interface{}{
+		"status":         "Live",
+		"active_workers": s.WorkerCount,
+		"total_dropped":  s.DropCounter.Load(),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(dummyState)
+	json.NewEncoder(w).Encode(actualState)
 }
 
 func (s *APIServer) handlePolicy(w http.ResponseWriter, r *http.Request) {

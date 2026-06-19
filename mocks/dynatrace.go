@@ -3,12 +3,13 @@ package mocks
 import (
 	"fmt"
 	"math/rand/v2"
+	"sync/atomic"
 	"time"
 	"watchtower/config"
 	"watchtower/models"
 )
 
-func GenerateDynatrace(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig) {
+func GenerateDynatrace(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig, dropCounter *atomic.Uint64) {
 	fmt.Println("[Dynatrace] mock mulai beroperasi")
 	var droppedCounter int64
 	for iteration := 1; ; iteration++ {
@@ -27,10 +28,10 @@ func GenerateDynatrace(dataPipe chan<- models.EventEnvelope, cfg *config.AppConf
 			Source:    "dynatrace",
 			Timestamp: currentTime,
 			Payload: map[string]interface{}{
-				"metric":     "cpu_usage_percent", 
-				"value":      cpuPercentage,      
+				"metric":     "cpu_usage_percent",
+				"value":      cpuPercentage,
 				"host":       "server-jkt-01",
-				"slo_breach": iteration%5 == 0, 
+				"slo_breach": iteration%5 == 0,
 			},
 		}
 
@@ -38,7 +39,7 @@ func GenerateDynatrace(dataPipe chan<- models.EventEnvelope, cfg *config.AppConf
 		case dataPipe <- incomingData:
 
 		default:
-			droppedCounter++
+			dropCounter.Add(1)
 			fmt.Printf("[Backpressure] Pipa penuh! %s terpaksa dibuang. (Total Dibuang: %d)\n", incomingData.ID, droppedCounter)
 		}
 		time.Sleep(time.Duration(cfg.Mocks.EmitIntervalMs) * time.Millisecond)

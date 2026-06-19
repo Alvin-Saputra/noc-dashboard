@@ -1,5 +1,62 @@
+
+async function fetchInitialState() {
+    try {
+        // Ambil Drop Counter awal
+        const stateRes = await fetch('/api/state');
+        if (stateRes.ok) {
+            const stateData = await stateRes.json();
+            document.getElementById('drop-counter').innerText = stateData.total_dropped;
+        }
+
+        // Ambil Policy (Kode Anda sebelumnya)
+        const policyRes = await fetch('/api/policy');
+        if (policyRes.ok) {
+            const policyData = await policyRes.json();
+            document.getElementById('policy-input').value = JSON.stringify(policyData, null, 2);
+        }
+    } catch (error) {
+        console.error("Gagal memuat state awal:", error);
+    }
+}
+
+async function updatePolicy() {
+    const statusText = document.getElementById('policy-status');
+    statusText.innerText = "Menyimpan...";
+    statusText.style.color = "#ebcb8b"; 
+
+    try {
+        let newPolicyString = document.getElementById('policy-input').value;
+
+        JSON.parse(newPolicyString); 
+
+        const response = await fetch('/api/policy', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: newPolicyString 
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.status}`);
+        }
+
+
+        statusText.innerText = "Policy berhasil diupdate!";
+        statusText.style.color = "#a3be8c"; 
+        
+        setTimeout(() => { statusText.innerText = ""; }, 3000);
+
+    } catch (error) {
+        console.error('Update failed:', error);
+        statusText.innerText = "Error: Format JSON tidak valid!";
+        statusText.style.color = "#bf616a"; 
+    }
+}
+
+
 window.onload = function () {
-    fetchPolicyData();
+    fetchInitialState();
 };
 
 const updatePolicyButton = document.getElementById('btn-update-policy');
@@ -13,6 +70,11 @@ const eventSource = new EventSource('/stream');
 
 eventSource.onmessage = function (event) {
     const data = JSON.parse(event.data);
+
+    if (data.type === "drop_update") {
+        document.getElementById('drop-counter').innerText = data.total_dropped;
+        return; 
+    }
 
     if (data.predicted_value !== undefined) {
 
@@ -86,60 +148,6 @@ eventSource.onmessage = function (event) {
     }
 };
 
-
-async function fetchPolicyData() {
-    try {
-        const response = await fetch('http://localhost:8081/api/policy');
-
-        if (!response.ok) {
-            throw new Error(`HTTP error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log("ini adalah isi dari policy json", data);
-
-       document.getElementById('policy-input').value = JSON.stringify(data, null, 2);
-    } catch (error) {
-        console.error(error);
-    }   
-
-
-}
-
-async function updatePolicy() {
-    const statusText = document.getElementById('policy-status');
-    statusText.innerText = "Menyimpan...";
-    statusText.style.color = "#ebcb8b"; 
-
-    try {
-        let newPolicyString = document.getElementById('policy-input').value;
-
-        JSON.parse(newPolicyString); 
-
-        const response = await fetch('/api/policy', {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: newPolicyString 
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error: ${response.status}`);
-        }
-
-
-        statusText.innerText = "Policy berhasil diupdate!";
-        statusText.style.color = "#a3be8c"; 
-        
-        setTimeout(() => { statusText.innerText = ""; }, 3000);
-
-    } catch (error) {
-        console.error('Update failed:', error);
-        statusText.innerText = "Error: Format JSON tidak valid!";
-        statusText.style.color = "#bf616a"; 
-    }
-}
 
 eventSource.onerror = function (error) {
     console.error("SSE Connection Error:", error);

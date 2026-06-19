@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"sync/atomic"
 	"syscall"
+	"time"
 
 	"watchtower/api"
 	"watchtower/config"
@@ -18,6 +21,7 @@ import (
 	"watchtower/storage"
 
 	"github.com/joho/godotenv"
+	"github.com/minio/minio-go/v7"
 )
 
 func main() {
@@ -69,11 +73,35 @@ func main() {
 
 	sseBroker := api.NewBroker()
 
+	var globalDropCounter atomic.Uint64
+
+	fmt.Println("[System] Memeriksa state sebelumnya di MinIO...")
+	stateObj, err := minioClient.GetObject(context.Background(), cfg.Storage.Bucket, "state/dashboard.json", minio.GetObjectOptions{})
+
+	// Jika file ada (tidak error saat mengambil)
+	if err == nil {
+		var savedState map[string]interface{}
+		// Coba terjemahkan isi JSON-nya
+		if errDecode := json.NewDecoder(stateObj).Decode(&savedState); errDecode == nil {
+			// JSON dari Golang biasanya membaca angka sebagai float64
+			if val, ok := savedState["total_dropped"].(float64); ok {
+				// Masukkan angka lama ke dalam penghitung kita!
+				globalDropCounter.Store(uint64(val))
+				fmt.Printf("[System] ✅ Berhasil memulihkan Drop Counter: %d\n", uint64(val))
+			}
+		}
+		stateObj.Close()
+	} else {
+		fmt.Println("[System] ℹ️ Tidak ada state sebelumnya (Mulai Drop Counter dari 0).")
+	}
+
 	apiServer := &api.APIServer{
 		PolicyManager: policyManager,
 		MinioClient:   minioClient,
 		BucketName:    cfg.Storage.Bucket,
 		SSEBroker:     sseBroker,
+		DropCounter:   &globalDropCounter, // Masukkan ke server
+		WorkerCount:   cfg.Screening.WorkerCount,
 	}
 
 	go func() {
@@ -133,10 +161,31 @@ func main() {
 		}
 	}()
 
-	go mocks.GenerateDynatrace(DataPipes, cfg)
-	go mocks.GenerateSplunk(DataPipes, cfg)
-	go mocks.GenerateRiverBed(DataPipes, cfg)
-	go mocks.GeneratePrometheus(DataPipes, cfg)
+	go func() {
+		ticker := time.NewTicker(time.Duration(cfg.Ingestion.DropLogIntervalMs) * time.Millisecond)
+		defer ticker.Stop()
+		var lastCount uint64 = 0
+
+		for range ticker.C {
+			currentCount := globalDropCounter.Load()
+			if currentCount > lastCount {
+				fmt.Printf("[Backpressure] Total event terbuang: %d\n", currentCount)
+				lastCount = currentCount
+
+				stateMsg := map[string]interface{}{
+					"type":          "drop_update",
+					"total_dropped": currentCount,
+				}
+				jsonData, _ := json.Marshal(stateMsg)
+				sseBroker.Notifier <- jsonData
+			}
+		}
+	}()
+
+	go mocks.GenerateDynatrace(DataPipes, cfg, &globalDropCounter)
+	go mocks.GenerateSplunk(DataPipes, cfg, &globalDropCounter)
+	go mocks.GenerateRiverBed(DataPipes, cfg, &globalDropCounter)
+	go mocks.GeneratePrometheus(DataPipes, cfg, &globalDropCounter)
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)

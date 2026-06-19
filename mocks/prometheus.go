@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"time"
+	"sync/atomic"
 	"watchtower/config"
 	"watchtower/models"
 )
 
-func GeneratePrometheus(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig) {
+func GeneratePrometheus(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig, dropCounter *atomic.Uint64) {
 	fmt.Println("[Prometheus] Pabrik mulai beroperasi...")
 
 	metricFamilies := []string{"http_request_rate", "http_error_rate", "system_saturation"}
@@ -69,7 +70,7 @@ func GeneratePrometheus(dataPipe chan<- models.EventEnvelope, cfg *config.AppCon
 		case dataPipe <- incomingData:
 
 		default:
-			droppedCounter++
+			dropCounter.Add(1)
 			fmt.Printf("[Backpressure] Pipa penuh! %s terpaksa dibuang. (Total Dibuang: %d)\n", incomingData.ID, droppedCounter)
 		}
 
