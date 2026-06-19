@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,7 +12,6 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
-
 	"watchtower/api"
 	"watchtower/config"
 	"watchtower/ml"
@@ -74,6 +74,7 @@ func main() {
 	sseBroker := api.NewBroker()
 
 	var globalDropCounter atomic.Uint64
+	var countProm, countDyna, countSplunk, countRiver atomic.Uint64
 
 	fmt.Println("[System] Memeriksa state sebelumnya di MinIO...")
 	stateObj, err := minioClient.GetObject(context.Background(), cfg.Storage.Bucket, "state/dashboard.json", minio.GetObjectOptions{})
@@ -87,8 +88,25 @@ func main() {
 			if val, ok := savedState["total_dropped"].(float64); ok {
 				// Masukkan angka lama ke dalam penghitung kita!
 				globalDropCounter.Store(uint64(val))
-				fmt.Printf("[System] ✅ Berhasil memulihkan Drop Counter: %d\n", uint64(val))
+
 			}
+
+			if totals, ok := savedState["ingestion_totals"].(map[string]interface{}); ok {
+				if val, ok := totals["prometheus"].(float64); ok {
+					countProm.Store(uint64(val))
+				}
+				if val, ok := totals["dynatrace"].(float64); ok {
+					countDyna.Store(uint64(val))
+				}
+				if val, ok := totals["splunktrace"].(float64); ok {
+					countSplunk.Store(uint64(val))
+				}
+				if val, ok := totals["riverbedtrace"].(float64); ok {
+					countRiver.Store(uint64(val))
+				}
+			}
+
+			fmt.Println("[System] ✅ Berhasil memulihkan State Dashboard dari MinIO!")
 		}
 		stateObj.Close()
 	} else {
@@ -100,7 +118,11 @@ func main() {
 		MinioClient:   minioClient,
 		BucketName:    cfg.Storage.Bucket,
 		SSEBroker:     sseBroker,
-		DropCounter:   &globalDropCounter, // Masukkan ke server
+		DropCounter:   &globalDropCounter,
+		CountProm:     &countProm,
+		CountDyna:     &countDyna,
+		CountSplunk:   &countSplunk,
+		CountRiver:    &countRiver,
 		WorkerCount:   cfg.Screening.WorkerCount,
 	}
 
@@ -182,10 +204,10 @@ func main() {
 		}
 	}()
 
-	go mocks.GenerateDynatrace(DataPipes, cfg, &globalDropCounter)
-	go mocks.GenerateSplunk(DataPipes, cfg, &globalDropCounter)
-	go mocks.GenerateRiverBed(DataPipes, cfg, &globalDropCounter)
-	go mocks.GeneratePrometheus(DataPipes, cfg, &globalDropCounter)
+	go mocks.GenerateDynatrace(DataPipes, cfg, &globalDropCounter, &countDyna)
+	go mocks.GenerateSplunk(DataPipes, cfg, &globalDropCounter, &countSplunk)
+	go mocks.GenerateRiverBed(DataPipes, cfg, &globalDropCounter, &countRiver)
+	go mocks.GeneratePrometheus(DataPipes, cfg, &globalDropCounter, &countProm)
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
@@ -193,6 +215,27 @@ func main() {
 	<-sigChan
 
 	fmt.Println("\n\n[System] Stop signal received! Shutting down the application gracefully...")
+
+	finalState := map[string]interface{}{
+		"total_dropped": globalDropCounter.Load(),
+		"timestamp":     time.Now().Unix(),
+		// --- TAMBAHAN: Simpan ke JSON ---
+		"ingestion_totals": map[string]interface{}{
+			"prometheus":    countProm.Load(),
+			"dynatrace":     countDyna.Load(),
+			"splunktrace":   countSplunk.Load(),
+			"riverbedtrace": countRiver.Load(),
+		},
+	}
+	stateJSON, _ := json.Marshal(finalState)
+
+	// Simpan file dashboard.json ke dalam bucket
+	_, errSave := minioClient.PutObject(context.Background(), cfg.Storage.Bucket, "state/dashboard.json", bytes.NewReader(stateJSON), int64(len(stateJSON)), minio.PutObjectOptions{ContentType: "application/json"})
+	if errSave == nil {
+		fmt.Println("[Storage] ✅ Dashboard state saved to /state/dashboard.json")
+	} else {
+		fmt.Printf("[Storage] ❌ Gagal menyimpan dashboard state: %v\n", errSave)
+	}
 
 	dedupCache.SaveSnapshot(minioClient, cfg.Storage.Bucket)
 

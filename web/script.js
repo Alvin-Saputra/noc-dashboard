@@ -5,7 +5,23 @@ async function fetchInitialState() {
         const stateRes = await fetch('/api/state');
         if (stateRes.ok) {
             const stateData = await stateRes.json();
-            document.getElementById('drop-counter').innerText = stateData.total_dropped;
+            const dropEl = document.getElementById('drop-counter');
+            if (dropEl) dropEl.innerText = stateData.total_dropped;
+
+            // --- TAMBAHAN: Set Modal Awal Laju Data ---
+            if (stateData.ingestion_totals) {
+                // Timpa angka 0 dengan angka dari MinIO
+                counters.prometheus = stateData.ingestion_totals.prometheus || 0;
+                counters.dynatrace = stateData.ingestion_totals.dynatrace || 0;
+                counters.splunktrace = stateData.ingestion_totals.splunktrace || 0;
+                counters.riverbedtrace = stateData.ingestion_totals.riverbedtrace || 0;
+
+                // Langsung tampilkan di HTML
+                document.getElementById('rate-prom').innerText = counters.prometheus;
+                document.getElementById('rate-dyna').innerText = counters.dynatrace;
+                document.getElementById('rate-splunk').innerText = counters.splunktrace;
+                document.getElementById('rate-river').innerText = counters.riverbedtrace;
+            }
         }
 
         // Ambil Policy (Kode Anda sebelumnya)

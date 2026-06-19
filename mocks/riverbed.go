@@ -9,7 +9,7 @@ import (
 	"watchtower/models"
 )
 
-func GenerateRiverBed(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig, dropCounter *atomic.Uint64) {
+func GenerateRiverBed(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig, dropCounter *atomic.Uint64, successCounter *atomic.Uint64) {
 	fmt.Println("[Dynatrace] mock mulai beroperasi")
 	sitePairs := []string{"SG-HQ - ID-JKT", "SG-HQ - US-WEST"}
 
@@ -44,6 +44,7 @@ func GenerateRiverBed(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfi
 
 		select {
 		case dataPipe <- incomingData:
+			successCounter.Add(1)
 
 		default:
 			dropCounter.Add(1)

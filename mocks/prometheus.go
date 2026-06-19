@@ -9,7 +9,7 @@ import (
 	"watchtower/models"
 )
 
-func GeneratePrometheus(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig, dropCounter *atomic.Uint64) {
+func GeneratePrometheus(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig, dropCounter *atomic.Uint64, successCounter *atomic.Uint64) {
 	fmt.Println("[Prometheus] Pabrik mulai beroperasi...")
 
 	metricFamilies := []string{"http_request_rate", "http_error_rate", "system_saturation"}
@@ -68,6 +68,7 @@ func GeneratePrometheus(dataPipe chan<- models.EventEnvelope, cfg *config.AppCon
 
 		select {
 		case dataPipe <- incomingData:
+			successCounter.Add(1)
 
 		default:
 			dropCounter.Add(1)

@@ -9,7 +9,7 @@ import (
 	"watchtower/models"
 )
 
-func GenerateDynatrace(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig, dropCounter *atomic.Uint64) {
+func GenerateDynatrace(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig, dropCounter *atomic.Uint64, successCounter *atomic.Uint64) {
 	fmt.Println("[Dynatrace] mock mulai beroperasi")
 	var droppedCounter int64
 	for iteration := 1; ; iteration++ {
@@ -37,6 +37,7 @@ func GenerateDynatrace(dataPipe chan<- models.EventEnvelope, cfg *config.AppConf
 
 		select {
 		case dataPipe <- incomingData:
+			successCounter.Add(1)
 
 		default:
 			dropCounter.Add(1)

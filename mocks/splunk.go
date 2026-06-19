@@ -9,7 +9,7 @@ import (
 	"watchtower/models"
 )
 
-func GenerateSplunk(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig, dropCounter *atomic.Uint64) {
+func GenerateSplunk(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig, dropCounter *atomic.Uint64, successCounter *atomic.Uint64) {
 	fmt.Println("[Dynatrace] mock mulai beroperasi")
 
 	severity := []string{
@@ -65,6 +65,7 @@ func GenerateSplunk(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig,
 
 		select {
 		case dataPipe <- incomingData:
+			successCounter.Add(1)
 
 		default:
 			dropCounter.Add(1)

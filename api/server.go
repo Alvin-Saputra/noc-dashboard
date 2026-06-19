@@ -17,7 +17,11 @@ type APIServer struct {
 	MinioClient   *minio.Client
 	BucketName    string
 	SSEBroker     *Broker
-	DropCounter   *atomic.Uint64 // <--- TAMBAHKAN PROPERTI INI
+	DropCounter   *atomic.Uint64 
+	CountProm     *atomic.Uint64 // <--- TAMBAHKAN INI
+	CountDyna     *atomic.Uint64
+	CountSplunk   *atomic.Uint64
+	CountRiver    *atomic.Uint64
 	WorkerCount   int
 }
 
@@ -48,6 +52,12 @@ func (s *APIServer) handleState(w http.ResponseWriter, r *http.Request) {
 		"status":         "Live",
 		"active_workers": s.WorkerCount,
 		"total_dropped":  s.DropCounter.Load(),
+		"ingestion_totals": map[string]interface{}{
+			"prometheus":    s.CountProm.Load(),
+			"dynatrace":     s.CountDyna.Load(),
+			"splunktrace":   s.CountSplunk.Load(),
+			"riverbedtrace": s.CountRiver.Load(),
+		},
 	}
 
 	w.Header().Set("Content-Type", "application/json")
