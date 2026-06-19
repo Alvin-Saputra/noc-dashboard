@@ -1,0 +1,85 @@
+  :root {
+            --bg-base: #121212;
+            --bg-surface: #1e1e1e;
+            --text-main: #e0e0e0;
+            --text-muted: #888888;
+            --border: #333333;
+            --accent: #5e81ac; /* Minimalist blue */
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            padding: 2rem;
+            line-height: 1.5;
+        }
+
+        .header {
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        h1 { font-weight: 500; font-size: 1.5rem; letter-spacing: -0.5px; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 2rem;
+        }
+
+        .panel {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1.5rem;
+        }
+
+        .panel-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+
+        .metric-value { font-family: monospace; font-size: 1.1rem; }
+
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+
+        .log-table th, .log-table td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .log-table th { color: var(--text-muted); font-weight: normal; }
+        
+        .tag {
+            padding: 2px 6px;
+            border-radius: 3px;
+            border: 1px solid var(--border);
+            font-size: 0.75rem;
+        }
+
+        .p1 { color: #bf616a; border-color: #bf616a; }
+        .p2 { color: #d08770; border-color: #d08770; }
+        .p3 { color: #ebcb8b; border-color: #ebcb8b; }
+        .p4 { color: var(--text-muted); }

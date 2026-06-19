@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NOC Dashboard | Watchtower</title>
+    <link rel="stylesheet" href="style.css?v=1">
+
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>NOC Watchtower</h1>
+    </div>
+
+    <div class="grid">
+        <div class="panel">
+            <div class="panel-title">System Status</div>
+
+            <div class="metric-row">
+                <span>Status</span>
+                <span style="color: #a3be8c;">● Live</span>
+            </div>
+
+            <div class="panel-title" style="margin-top: 2rem;">Ingestion Rates</div>
+            <div class="metric-row"><span>Prometheus</span><span class="metric-value" id="rate-prom">0</span></div>
+            <div class="metric-row"><span>Dynatrace</span><span class="metric-value" id="rate-dyna">0</span></div>
+            <div class="metric-row"><span>Splunk</span><span class="metric-value" id="rate-splunk">0</span></div>
+            <div class="metric-row"><span>Riverbed</span><span class="metric-value" id="rate-river">0</span></div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">Live Event Feed (Last 50)</div>
+            <table class="log-table">
+                <thead>
+                    <tr>
+                        <th>TIME</th>
+                        <th>SOURCE</th>
+                        <th>PRIORITY</th>
+                        <th>METRIC / MSG</th>
+                    </tr>
+                </thead>
+                <tbody id="event-feed">
+                </tbody>
+            </table>
+        </div>
+
+
+
+        <div class="left-column">
+
+
+            <div class="panel">
+                <div class="panel-title">Anomaly Alert</div>
+                <h2 id="metric-source" style=" font-weight: bold;"></h2>
+                <span style="color: #bf616a; font-weight: bold;" id="metric-name">Menunggu...</span><br>
+                <span class="metric-value" id="metric-value" style="font-size: 2rem;">-</span>
+            </div>
+        </div>
+
+        <!-- <div class="panel">
+            <div class="panel-title">5 Minutes Forecast</div>
+             <table class="log-table">
+                <thead>
+                    <tr>
+                        <th>SOURCE</th>
+                        <th>METRIC / MSG</th>
+                        <th>METRIC Value</th>
+                    </tr>
+                </thead>
+                <tbody id="forecast-feed">
+                    <tr id="dynatrace">
+
+                    </tr>
+                    <tr id="riverbed">
+                        
+                    </tr>
+                    <tr id="prometheus">
+
+                    </tr>
+                  
+                    </tbody>
+            </table>
+            </div> -->
+
+
+        <!-- <div class="panel">
+            <div class="panel-title">5 Minutes Forecast</div>
+            <table class="dynatrace-table">
+                <thead>
+                    <tr>
+                        <th>SOURCE</th>
+                        <th>METRIC / MSG</th>
+                        <th>METRIC Value</th>
+                    </tr>
+                </thead>
+                <tbody id="forecast-feed">
+                    <tr id="dynatrace"> </tr>
+                </tbody>
+            </table>
+            <table class="prometheus-table">
+                <thead>
+                    <tr>
+                        <th>SOURCE</th>
+                        <th>METRIC / MSG</th>
+                        <th>METRIC Value</th>
+                    </tr>
+                </thead>
+                <tbody id="forecast-feed">
+                    <tr id="dynatrace"> </tr>
+                </tbody>
+            </table>
+            <table class="riverbed-table">
+                <thead>
+                    <tr>
+                        <th>SOURCE</th>
+                        <th>METRIC / MSG</th>
+                        <th>METRIC Value</th>
+                    </tr>
+                </thead>
+                <tbody id="forecast-feed">
+                    <tr id="dynatrace"> </tr>
+                </tbody>
+            </table>
+        </div> -->
+
+        <div class="panel">
+            <div class="panel-title">5 Minutes AI Forecast</div>
+            
+            <div class="metric-row">
+                <span style="color: #ebcb8b;">CPU Usage (Dynatrace)</span>
+                <span class="metric-value" id="fc-dyna">Belum ada data</span>
+            </div>
+            
+            <div class="metric-row">
+                <span style="color: #ebcb8b;">HTTP Req Rate (Prometheus)</span>
+                <span class="metric-value" id="fc-prom-req-rate">Belum ada data</span>
+            </div>
+            <div class="metric-row">
+                <span style="color: #ebcb8b;">HTTP Error Rate (Prometheus)</span>
+                <span class="metric-value" id="fc-prom-error-rate">Belum ada data</span>
+            </div>
+            <div class="metric-row">
+                <span style="color: #ebcb8b;">System Saturation (Prometheus)</span>
+                <span class="metric-value" id="fc-prom-system-saturation">Belum ada data</span>
+            </div>
+            
+            <div class="metric-row">
+                <span style="color: #ebcb8b;">RTT (Riverbed)</span>
+                <span class="metric-value" id="fc-river">Belum ada data</span>
+            </div>
+        </div>
+
+
+        <div class="panel">
+                <div class="panel-title">Policy Configuration (JSON)</div>
+                <textarea id="policy-input" rows="8" style="
+                    width: 100%; 
+                    background-color: #111; 
+                    color: #a3be8c; 
+                    border: 1px solid var(--border); 
+                    border-radius: 4px; 
+                    padding: 0.75rem; 
+                    font-family: monospace; 
+                    font-size: 0.85rem; 
+                    resize: vertical;" 
+                placeholder='{\n  "default_priority": "P4",\n  "rules": []\n}'></textarea>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+                    <span id="policy-status" style="font-size: 0.8rem; color: #888;"></span>
+                    <button id="btn-update-policy" style="
+                        background-color: var(--accent); 
+                        color: #fff; 
+                        border: none; 
+                        padding: 0.5rem 1rem; 
+                        border-radius: 4px; 
+                        cursor: pointer; 
+                        font-weight: 600; 
+                        font-size: 0.85rem;">
+                        Update Policy
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="script.js">
+
+    </script>
+</body>
+
+</html>

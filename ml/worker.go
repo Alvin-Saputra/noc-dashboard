@@ -18,6 +18,7 @@ func StartMLWorker(
 	minioClient *minio.Client,
 	bucketName string,
 	cfg *config.AppConfig,
+	sseNotifier chan<- []byte,
 ) {
 
 	detectors := make(map[string]*ZScoreDetector)
@@ -53,7 +54,7 @@ func StartMLWorker(
 		key := fmt.Sprintf("%s-%s", data.Source, metricName)
 
 		if _, exists := detectors[key]; !exists {
-			detectors[key] = NewZScoreDetector(cfg.ML.AnomalySigmaThreshold, cfg.ML.RegressionWindowSize)
+			detectors[key] = NewZScoreDetector(cfg.ML.AnomalySigmaThreshold, 10)
 		}
 
 		detector := detectors[key]
@@ -72,6 +73,8 @@ func StartMLWorker(
 				Timestamp:     data.Timestamp,
 			}
 			saveAnomalyToMinIO(result, data.ID, minioClient, bucketName)
+			jsonAnomali, _ := json.Marshal(result)
+			sseNotifier <- jsonAnomali
 		}
 
 		if _, exists := predictors[key]; !exists {
@@ -97,6 +100,8 @@ func StartMLWorker(
 		}
 
 		saveForecastToMinIO(forecast, minioClient, bucketName)
+		jsonRamalan, _ := json.Marshal(forecast)
+		sseNotifier <- jsonRamalan
 
 	}
 }

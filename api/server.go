@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"mime"
 	"net/http"
 	"watchtower/screening"
 
@@ -18,7 +19,13 @@ type APIServer struct {
 }
 
 func (s *APIServer) Start(port int) error {
+	mime.AddExtensionType(".css", "text/css")
+	// -------------------------------------------------------------
+
 	mux := http.NewServeMux()
+
+	fs := http.FileServer(http.Dir("web"))
+	mux.Handle("/", fs)
 
 	mux.HandleFunc("/api/state", s.handleState)
 	mux.HandleFunc("/api/policy", s.handlePolicy)
@@ -102,7 +109,7 @@ func (s *APIServer) handleStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	messageChan := make(chan []byte)
-	s.SSEBroker.newClients <- messageChan 
+	s.SSEBroker.newClients <- messageChan
 
 	defer func() {
 		s.SSEBroker.closingClients <- messageChan

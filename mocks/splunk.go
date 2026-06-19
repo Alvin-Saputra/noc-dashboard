@@ -58,7 +58,7 @@ func GenerateSplunk(dataPipe chan<- models.EventEnvelope, cfg *config.AppConfig)
 				"severity":  severity[randomizer],
 				"source_ip": "192.168.1.55",
 				"service":   "auth-service",
-				"message":   "Failed login attempt",
+				"message":   "Successful login attempt",
 			},
 		}
 

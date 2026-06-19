@@ -104,7 +104,7 @@ func main() {
 		}
 	}()
 
-	go ml.StartMLWorker(MLPipes, minioClient, cfg.Storage.Bucket, cfg)
+	go ml.StartMLWorker(MLPipes, minioClient, cfg.Storage.Bucket, cfg, sseBroker.Notifier)
 
 	go func() {
 		for cleanData := range CleanDataPipes {
