@@ -18,7 +18,7 @@ type APIServer struct {
 	BucketName    string
 	SSEBroker     *Broker
 	DropCounter   *atomic.Uint64 
-	CountProm     *atomic.Uint64 // <--- TAMBAHKAN INI
+	CountProm     *atomic.Uint64 
 	CountDyna     *atomic.Uint64
 	CountSplunk   *atomic.Uint64
 	CountRiver    *atomic.Uint64
@@ -27,7 +27,6 @@ type APIServer struct {
 
 func (s *APIServer) Start(port int) error {
 	mime.AddExtensionType(".css", "text/css")
-	// -------------------------------------------------------------
 
 	mux := http.NewServeMux()
 

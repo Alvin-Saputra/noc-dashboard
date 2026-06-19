@@ -30,10 +30,7 @@
             <div class="metric-row"><span>Splunk</span><span class="metric-value" id="rate-splunk">0</span></div>
             <div class="metric-row"><span>Riverbed</span><span class="metric-value" id="rate-river">0</span></div>
             <div class="metric-row"><span>Dropped Events</span><span class="metric-value" id="drop-counter">0</span></div>
-            <!-- <div class="metric-row" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
-                <span style="color: #bf616a; font-weight: bold;">Dropped Events</span>
-                <span class="metric-value" id="drop-counter" style="color: #bf616a;">0</span>
-            </div> -->
+         
         </div>
 
         <div class="panel">
@@ -65,72 +62,7 @@
             </div>
         </div>
 
-        <!-- <div class="panel">
-            <div class="panel-title">5 Minutes Forecast</div>
-             <table class="log-table">
-                <thead>
-                    <tr>
-                        <th>SOURCE</th>
-                        <th>METRIC / MSG</th>
-                        <th>METRIC Value</th>
-                    </tr>
-                </thead>
-                <tbody id="forecast-feed">
-                    <tr id="dynatrace">
-
-                    </tr>
-                    <tr id="riverbed">
-                        
-                    </tr>
-                    <tr id="prometheus">
-
-                    </tr>
-                  
-                    </tbody>
-            </table>
-            </div> -->
-
-
-        <!-- <div class="panel">
-            <div class="panel-title">5 Minutes Forecast</div>
-            <table class="dynatrace-table">
-                <thead>
-                    <tr>
-                        <th>SOURCE</th>
-                        <th>METRIC / MSG</th>
-                        <th>METRIC Value</th>
-                    </tr>
-                </thead>
-                <tbody id="forecast-feed">
-                    <tr id="dynatrace"> </tr>
-                </tbody>
-            </table>
-            <table class="prometheus-table">
-                <thead>
-                    <tr>
-                        <th>SOURCE</th>
-                        <th>METRIC / MSG</th>
-                        <th>METRIC Value</th>
-                    </tr>
-                </thead>
-                <tbody id="forecast-feed">
-                    <tr id="dynatrace"> </tr>
-                </tbody>
-            </table>
-            <table class="riverbed-table">
-                <thead>
-                    <tr>
-                        <th>SOURCE</th>
-                        <th>METRIC / MSG</th>
-                        <th>METRIC Value</th>
-                    </tr>
-                </thead>
-                <tbody id="forecast-feed">
-                    <tr id="dynatrace"> </tr>
-                </tbody>
-            </table>
-        </div> -->
-
+          
         <div class="panel">
             <div class="panel-title">5 Minutes AI Forecast</div>
             
@@ -154,7 +86,15 @@
             
             <div class="metric-row">
                 <span style="color: #ebcb8b;">RTT (Riverbed)</span>
-                <span class="metric-value" id="fc-river">Belum ada data</span>
+                <span class="metric-value" id="fc-river-rtt">Belum ada data</span>
+            </div>
+            <div class="metric-row">
+                <span style="color: #ebcb8b;">Throughput Mbps (Riverbed)</span>
+                <span class="metric-value" id="fc-river-throughput">Belum ada data</span>
+            </div>
+            <div class="metric-row">
+                <span style="color: #ebcb8b;">Packet Loss Percent(Riverbed)</span>
+                <span class="metric-value" id="fc-river-packet-loss">Belum ada data</span>
             </div>
         </div>
 

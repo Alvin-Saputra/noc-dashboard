@@ -72,7 +72,7 @@ func GeneratePrometheus(dataPipe chan<- models.EventEnvelope, cfg *config.AppCon
 
 		default:
 			dropCounter.Add(1)
-			fmt.Printf("[Backpressure] Pipa penuh! %s terpaksa dibuang. (Total Dibuang: %d)\n", incomingData.ID, droppedCounter)
+			fmt.Printf("[Backpressure] Pipe Full! %s had to be discarded. (Total Discarded: %d)\n", incomingData.ID, droppedCounter)
 		}
 
 		currentIndex = (currentIndex + 1) % len(metricFamilies)

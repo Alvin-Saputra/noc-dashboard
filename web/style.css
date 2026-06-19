@@ -4,7 +4,7 @@
             --text-main: #e0e0e0;
             --text-muted: #888888;
             --border: #333333;
-            --accent: #5e81ac; /* Minimalist blue */
+            --accent: #5e81ac;
         }
         
         * { box-sizing: border-box; margin: 0; padding: 0; }

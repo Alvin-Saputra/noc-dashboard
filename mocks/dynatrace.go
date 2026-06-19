@@ -41,7 +41,7 @@ func GenerateDynatrace(dataPipe chan<- models.EventEnvelope, cfg *config.AppConf
 
 		default:
 			dropCounter.Add(1)
-			fmt.Printf("[Backpressure] Pipa penuh! %s terpaksa dibuang. (Total Dibuang: %d)\n", incomingData.ID, droppedCounter)
+			fmt.Printf("[Backpressure] Pipe Full! %s had to be discarded. (Total Discarded: %d)\n", incomingData.ID, droppedCounter)
 		}
 		time.Sleep(time.Duration(cfg.Mocks.EmitIntervalMs) * time.Millisecond)
 	}
